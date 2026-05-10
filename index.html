@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Schedule Manager</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface2: #273549;
+      --border: #334155;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --accent-light: rgba(99,102,241,0.15);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .logo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #6366f1, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header-actions { display: flex; gap: 10px; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: none;
+      outline: none;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(99,102,241,0.4); }
+    .btn-ghost {
+      background: var(--surface2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { color: var(--text); background: var(--border); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-sm { padding: 5px 12px; font-size: 0.78rem; }
+
+    /* ── Main content ── */
+    main { padding: 36px 32px; max-width: 1400px; margin: 0 auto; }
+
+    .page-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .page-subtitle { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 28px; }
+
+    /* ── Schedule table (main) ── */
+    .table-wrapper {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .table-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .table-title { font-weight: 600; font-size: 0.95rem; }
+    .badge {
+      background: var(--accent-light);
+      color: var(--accent);
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    thead { background: var(--surface2); }
+    th {
+      padding: 12px 14px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    th.hour-col, td.hour-col { text-align: center; min-width: 58px; }
+    td {
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+    .email-cell { font-weight: 500; color: var(--text); }
+    .pass-cell { color: var(--text-muted); letter-spacing: 2px; }
+
+    .check-icon {
+      display: inline-block;
+      width: 22px;
+      height: 22px;
+      background: var(--success);
+      border-radius: 50%;
+      text-align: center;
+      line-height: 22px;
+      font-size: 12px;
+      margin: auto;
+    }
+    .dash-icon {
+      color: var(--border);
+      display: block;
+      text-align: center;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state svg { opacity: 0.3; margin-bottom: 16px; }
+    .empty-state p { font-size: 0.95rem; }
+    .empty-state small { font-size: 0.8rem; }
+
+    .loading-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    /* ── Modal overlay ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      padding: 20px;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 780px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: scale(0.96) translateY(8px);
+      transition: transform 0.2s;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    }
+    .modal-overlay.open .modal { transform: scale(1) translateY(0); }
+
+    .modal-header {
+      padding: 20px 24px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .modal-title { font-size: 1.1rem; font-weight: 700; }
+    .modal-close {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .modal-close:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+    .modal-body { padding: 0 24px 24px; }
+
+    /* ── Form ── */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+    input[type="email"], input[type="password"], input[type="text"] {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+    input::placeholder { color: var(--text-muted); }
+
+    /* ── Schedule grid in modal ── */
+    .schedule-section { margin-top: 4px; }
+    .schedule-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 10px;
+    }
+    .schedule-grid-wrap {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .schedule-grid-wrap table { font-size: 0.82rem; }
+    .schedule-grid-wrap th {
+      background: rgba(0,0,0,0.2);
+      padding: 10px 8px;
+      font-size: 0.7rem;
+    }
+    .schedule-grid-wrap td {
+      padding: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      text-align: center;
+    }
+    .schedule-grid-wrap td:first-child {
+      text-align: left;
+      padding-left: 14px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .schedule-grid-wrap tr:last-child td { border-bottom: none; }
+
+    /* Custom checkbox */
+    .slot-cb { display: none; }
+    .slot-label {
+      display: inline-block;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      border: 2px solid var(--border);
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+    .slot-label:hover { border-color: var(--accent); background: var(--accent-light); }
+    .slot-cb:checked + .slot-label {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .slot-cb:checked + .slot-label::after {
+      content: '✓';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .modal-footer {
+      padding: 0 24px 24px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      border-top: 1px solid var(--border);
+      padding-top: 18px;
+      margin-top: 4px;
+    }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      z-index: 200;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.success { border-color: var(--success); }
+    #toast.error { border-color: var(--danger); }
+
+    /* Spinner */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none;
+    }
+    .btn.loading .spinner { display: inline-block; }
+    .btn.loading .btn-text { opacity: 0.7; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 640px) {
+      header { padding: 0 16px; }
+      main { padding: 24px 16px; }
+      .form-row { grid-template-columns: 1fr; }
+      .modal-body, .modal-header, .modal-footer { padding-left: 16px; padding-right: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ──────────── HEADER ──────────── -->
+<header>
+  <span class="logo">⟡ ScheduleHub</span>
+  <div class="header-actions">
+    <button class="btn btn-primary" onclick="openAddModal()">+ Add Entry</button>
+  </div>
+</header>
+
+<!-- ──────────── MAIN ──────────── -->
+<main>
+  <div class="page-title">Schedule Overview</div>
+  <div class="page-subtitle">All registered entries with their weekly availability preferences.</div>
+
+  <div class="table-wrapper">
+    <div class="table-header">
+      <span class="table-title">Entries</span>
+      <span class="badge" id="count-badge">0 entries</span>
+    </div>
+    <div id="table-container">
+      <div class="loading-state">Loading data…</div>
+    </div>
+  </div>
+</main>
+
+<!-- ──────────── ADD MODAL ──────────── -->
+<div class="modal-overlay" id="add-modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="add-modal-title">
+    <div class="modal-header">
+      <span class="modal-title" id="add-modal-title">Add New Entry</span>
+      <button class="modal-close" onclick="closeAddModal()" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="f-nickname">Nickname <span style="color:var(--accent);font-size:0.7rem;">(unique)</span></label>
+          <input type="text" id="f-nickname" placeholder="e.g. john_d" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label for="f-email">Email</label>
+          <input type="email" id="f-email" placeholder="you@example.com" autocomplete="email" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="f-password">Password</label>
+          <input type="password" id="f-password" placeholder="••••••••" autocomplete="new-password" />
+        </div>
+        <div class="form-group"></div>
+      </div>
+
+      <div class="schedule-section">
+        <div class="schedule-label">Weekly Availability</div>
+        <div class="schedule-grid-wrap">
+          <table id="schedule-grid">
+            <thead>
+              <tr id="schedule-header-row">
+                <th>Day</th>
+                <!-- hour columns injected by JS -->
+              </tr>
+            </thead>
+            <tbody id="schedule-body">
+              <!-- day rows injected by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeAddModal()">Cancel</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveEntry()">
+        <div class="spinner"></div>
+        <span class="btn-text">Add Entry</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────── TOAST ──────────── -->
+<div id="toast"></div>
+
+<script>
+  /* ═══════════════════════════════════════════════
+     CONSTANTS
+  ═══════════════════════════════════════════════ */
+  const DAYS  = ['Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const HOURS = ['6:00','7:00','8:00','18:00','19:00','20:00'];
+  const DATA_FILENAME = 'sunset.json';
+  const GCS_BUCKET    = 'sunset_public';
+
+  /* ═══════════════════════════════════════════════
+     GCS API  — bucket is fully public (read + write)
+  ═══════════════════════════════════════════════ */
+  async function loadData() {
+    const url = `https://storage.googleapis.com/${GCS_BUCKET}/${DATA_FILENAME}`;
+    let res;
+    try {
+      res = await fetch(url, { cache: 'no-store' });
+    } catch (e) {
+      throw new Error(`Network error — check bucket CORS settings (${e.message})`);
+    }
+    if (res.status === 404) return [];
+    if (!res.ok) throw new Error(`GCS read error ${res.status}`);
+    const text = await res.text();
+    if (!text.trim()) return [];
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error('File exists but contains invalid JSON. Check sunset.json in your bucket.');
+    }
+  }
+
+  async function saveData(entries) {
+    // XML API — same domain as reads, avoids JSON API CORS issues
+    const url = `https://storage.googleapis.com/${GCS_BUCKET}/${DATA_FILENAME}`;
+
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entries, null, 2),
+    });
+
+    if (!res.ok) {
+      throw new Error(`GCS write error ${res.status}`);
+    }
+  }
+
+  /* ═══════════════════════════════════════════════
+     SCHEDULE GRID (modal)
+  ═══════════════════════════════════════════════ */
+  function buildScheduleGrid() {
+    const headerRow = document.getElementById('schedule-header-row');
+    // Clear existing hour headers (keep first "Day" th)
+    while (headerRow.children.length > 1) headerRow.removeChild(headerRow.lastChild);
+    HOURS.forEach(h => {
+      const th = document.createElement('th');
+      th.className = 'hour-col';
+      th.textContent = h;
+      headerRow.appendChild(th);
+    });
+
+    const tbody = document.getElementById('schedule-body');
+    tbody.innerHTML = '';
+    DAYS.forEach(day => {
+      const tr = document.createElement('tr');
+      // Day label
+      const tdDay = document.createElement('td');
+      tdDay.textContent = day;
+      tr.appendChild(tdDay);
+      // Hour checkboxes
+      HOURS.forEach(hour => {
+        const td = document.createElement('td');
+        td.className = 'hour-col';
+        const id = `cb-${day}-${hour}`;
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'slot-cb';
+        cb.id = id;
+        cb.dataset.day = day;
+        cb.dataset.hour = hour;
+        const lbl = document.createElement('label');
+        lbl.className = 'slot-label';
+        lbl.htmlFor = id;
+        lbl.title = `${day} ${hour}`;
+        td.appendChild(cb);
+        td.appendChild(lbl);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  function resetScheduleGrid() {
+    document.querySelectorAll('.slot-cb').forEach(cb => cb.checked = false);
+  }
+
+  function readScheduleGrid() {
+    const schedule = {};
+    DAYS.forEach(d => { schedule[d] = []; });
+    document.querySelectorAll('.slot-cb:checked').forEach(cb => {
+      schedule[cb.dataset.day].push(cb.dataset.hour);
+    });
+    return schedule;
+  }
+
+  /* ═══════════════════════════════════════════════
+     MAIN TABLE RENDER
+  ═══════════════════════════════════════════════ */
+  function renderTable(entries) {
+    const container = document.getElementById('table-container');
+    const badge = document.getElementById('count-badge');
+    badge.textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`;
+
+    if (entries.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <p>No entries yet.</p>
+          <small>Click <strong>Add Entry</strong> to get started.</small>
+        </div>`;
+      return;
+    }
+
+    // Build header
+    let html = `<table>
+      <thead>
+        <tr>
+          <th>Nickname</th>
+          <th>Email</th>
+          <th>Password</th>`;
+    DAYS.forEach(d => {
+      HOURS.forEach(h => {
+        html += `<th class="hour-col" title="${d} ${h}">${d.slice(0,3)}<br><span style="font-weight:400;opacity:.7">${h}</span></th>`;
+      });
+    });
+    html += `<th>Added</th><th></th></tr>
+      </thead><tbody>`;
+
+    entries.forEach((entry, idx) => {
+      html += `<tr>
+        <td style="font-weight:600;color:var(--accent)">${escHtml(entry.nickname || '—')}</td>
+        <td class="email-cell">${escHtml(entry.email)}</td>
+        <td class="pass-cell">••••••••</td>`;
+      DAYS.forEach(d => {
+        HOURS.forEach(h => {
+          const checked = entry.schedule && entry.schedule[d] && entry.schedule[d].includes(h);
+          html += `<td class="hour-col">${checked
+            ? `<span class="check-icon">✓</span>`
+            : `<span class="dash-icon">—</span>`}</td>`;
+        });
+      });
+      const date = entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : '—';
+      html += `<td style="color:var(--text-muted);font-size:0.8rem;">${date}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteEntry(${idx})">✕</button></td>
+      </tr>`;
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ═══════════════════════════════════════════════
+     ENTRY CRUD
+  ═══════════════════════════════════════════════ */
+  let _entries = [];
+
+  async function saveEntry() {
+    const nickname = document.getElementById('f-nickname').value.trim();
+    const email    = document.getElementById('f-email').value.trim();
+    const password = document.getElementById('f-password').value;
+
+    if (!nickname) { showToast('Nickname is required.', 'error'); return; }
+    if (!email)    { showToast('Email is required.', 'error'); return; }
+    if (!password) { showToast('Password is required.', 'error'); return; }
+
+    const duplicate = _entries.some(e => e.nickname?.toLowerCase() === nickname.toLowerCase());
+    if (duplicate) { showToast(`Nickname "${nickname}" is already taken.`, 'error'); return; }
+
+    const schedule = readScheduleGrid();
+    const entry = {
+      nickname,
+      email,
+      password: btoa(password),
+      schedule,
+      createdAt: new Date().toISOString(),
+    };
+
+    const btn = document.getElementById('save-btn');
+    setLoading(btn, true);
+
+    try {
+      _entries.push(entry);
+      await saveData(_entries);
+      renderTable(_entries);
+      closeAddModal();
+      showToast('Entry saved successfully!', 'success');
+    } catch (err) {
+      _entries.pop();
+      showToast(`Save failed: ${err.message}`, 'error');
+      console.error(err);
+    } finally {
+      setLoading(btn, false);
+    }
+  }
+
+  async function deleteEntry(idx) {
+    if (!confirm('Delete this entry?')) return;
+    _entries.splice(idx, 1);
+    try {
+      await saveData(_entries);
+      renderTable(_entries);
+      showToast('Entry deleted.', 'success');
+    } catch (err) {
+      showToast(`Delete failed: ${err.message}`, 'error');
+    }
+  }
+
+  /* ═══════════════════════════════════════════════
+     MODAL HELPERS
+  ═══════════════════════════════════════════════ */
+  function openAddModal() {
+    document.getElementById('f-nickname').value = '';
+    document.getElementById('f-email').value = '';
+    document.getElementById('f-password').value = '';
+    resetScheduleGrid();
+    document.getElementById('add-modal-overlay').classList.add('open');
+    document.getElementById('f-email').focus();
+  }
+  function closeAddModal() {
+    document.getElementById('add-modal-overlay').classList.remove('open');
+  }
+
+  /* ═══════════════════════════════════════════════
+     UI UTILITIES
+  ═══════════════════════════════════════════════ */
+  function setLoading(btn, on) {
+    btn.classList.toggle('loading', on);
+    btn.disabled = on;
+  }
+
+  let _toastTimer;
+  function showToast(msg, type = 'info') {
+    const t = document.getElementById('toast');
+    const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
+    t.innerHTML = `<span>${icon}</span> ${escHtml(msg)}`;
+    t.className = `show ${type}`;
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => { t.className = ''; }, 3500);
+  }
+
+  // Close modal on overlay click or Esc
+  document.getElementById('add-modal-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeAddModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeAddModal();
+  });
+
+  /* ═══════════════════════════════════════════════
+     INIT
+  ═══════════════════════════════════════════════ */
+  async function init() {
+    buildScheduleGrid();
+
+    document.getElementById('table-container').innerHTML =
+      '<div class="loading-state">Fetching data from GCS…</div>';
+
+    try {
+      _entries = await loadData();
+      renderTable(_entries);
+    } catch (err) {
+      document.getElementById('table-container').innerHTML =
+        `<div class="empty-state"><p style="color:var(--danger)">Failed to load data.</p><small>${escHtml(err.message)}</small></div>`;
+      console.error(err);
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
