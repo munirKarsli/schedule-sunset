@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Schedule Manager</title>
+  <title>Program Yöneticisi</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -98,6 +98,12 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       overflow: hidden;
+    }
+    #table-container {
+      overflow-x: auto;
+    }
+    #table-container table {
+      min-width: max-content;
     }
     .table-header {
       padding: 16px 20px;
@@ -242,7 +248,7 @@
     }
     .form-group { display: flex; flex-direction: column; gap: 6px; }
     label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
-    input[type="email"], input[type="password"], input[type="text"] {
+    input[type="email"], input[type="password"], input[type="text"], input[type="tel"] {
       background: var(--surface2);
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -382,22 +388,22 @@
 <header>
   <span class="logo">⟡ ScheduleHub</span>
   <div class="header-actions">
-    <button class="btn btn-primary" onclick="openAddModal()">+ Add Entry</button>
+    <button class="btn btn-primary" onclick="openAddModal()">+ Kayıt Ekle</button>
   </div>
 </header>
 
 <!-- ──────────── MAIN ──────────── -->
 <main>
-  <div class="page-title">Schedule Overview</div>
-  <div class="page-subtitle">All registered entries with their weekly availability preferences.</div>
+  <div class="page-title">Program Genel Bakışı</div>
+  <div class="page-subtitle">Haftalık müsaitlik tercihleriyle tüm kayıtlı girişler.</div>
 
   <div class="table-wrapper">
     <div class="table-header">
-      <span class="table-title">Entries</span>
-      <span class="badge" id="count-badge">0 entries</span>
+      <span class="table-title">Kayıtlar</span>
+      <span class="badge" id="count-badge">0 kayıt</span>
     </div>
     <div id="table-container">
-      <div class="loading-state">Loading data…</div>
+      <div class="loading-state">Veriler yükleniyor…</div>
     </div>
   </div>
 </main>
@@ -406,35 +412,38 @@
 <div class="modal-overlay" id="add-modal-overlay">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="add-modal-title">
     <div class="modal-header">
-      <span class="modal-title" id="add-modal-title">Add New Entry</span>
+      <span class="modal-title" id="add-modal-title">Yeni Kayıt Ekle</span>
       <button class="modal-close" onclick="closeAddModal()" aria-label="Close">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group">
-          <label for="f-nickname">Nickname <span style="color:var(--accent);font-size:0.7rem;">(unique)</span></label>
-          <input type="text" id="f-nickname" placeholder="e.g. john_d" autocomplete="off" />
+          <label for="f-nickname">Kullanıcı Adı <span style="color:var(--accent);font-size:0.7rem;">(benzersiz)</span></label>
+          <input type="text" id="f-nickname" placeholder="örn. john_d" autocomplete="off" />
         </div>
         <div class="form-group">
-          <label for="f-email">Email</label>
-          <input type="email" id="f-email" placeholder="you@example.com" autocomplete="email" />
+          <label for="f-email">E-posta</label>
+          <input type="email" id="f-email" placeholder="siz@ornek.com" autocomplete="email" />
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label for="f-password">Password</label>
+          <label for="f-password">Şifre</label>
           <input type="password" id="f-password" placeholder="••••••••" autocomplete="new-password" />
         </div>
-        <div class="form-group"></div>
+        <div class="form-group">
+          <label for="f-phone">Telefon</label>
+          <input type="tel" id="f-phone" placeholder="+90 5XX XXX XX XX" autocomplete="tel" />
+        </div>
       </div>
 
       <div class="schedule-section">
-        <div class="schedule-label">Weekly Availability</div>
+        <div class="schedule-label">Haftalık Müsaitlik</div>
         <div class="schedule-grid-wrap">
           <table id="schedule-grid">
             <thead>
               <tr id="schedule-header-row">
-                <th>Day</th>
+                <th>Gün</th>
                 <!-- hour columns injected by JS -->
               </tr>
             </thead>
@@ -446,10 +455,63 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeAddModal()">Cancel</button>
+      <button class="btn btn-ghost" onclick="closeAddModal()">İptal</button>
       <button class="btn btn-primary" id="save-btn" onclick="saveEntry()">
         <div class="spinner"></div>
-        <span class="btn-text">Add Entry</span>
+        <span class="btn-text">Kayıt Ekle</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────── DELETE CONFIRM MODAL ──────────── -->
+<div class="modal-overlay" id="delete-modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title" style="max-width:420px;">
+    <div class="modal-header">
+      <span class="modal-title" id="delete-modal-title">Kaydı Sil</span>
+      <button class="modal-close" onclick="closeDeleteModal()" aria-label="Kapat">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:16px;">
+        Bu kaydı silmek için kayıtta kayıtlı <strong style="color:var(--text)">e-posta adresini</strong> girin.
+      </p>
+      <div class="form-group">
+        <label for="delete-email-input">E-posta Doğrulama</label>
+        <input type="email" id="delete-email-input" placeholder="siz@ornek.com" autocomplete="off" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeDeleteModal()">İptal</button>
+      <button class="btn btn-danger" id="delete-confirm-btn" onclick="confirmDeleteEntry()">
+        <div class="spinner"></div>
+        <span class="btn-text">Sil</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────── WARNING MODAL ──────────── -->
+<div class="modal-overlay open" id="warning-modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true" style="max-width:460px;">
+    <div class="modal-header" style="padding-bottom:0;">
+      <span class="modal-title" style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.3rem;">⚠️</span> Güvenlik Uyarısı
+      </span>
+    </div>
+    <div class="modal-body" style="padding-top:16px;">
+      <p style="color:var(--text);font-size:0.925rem;line-height:1.7;">
+        E-posta ve şifreler <strong style="color:var(--danger)">halka açık kaynaklarda</strong> tutuluyor.
+        <br><br>
+        <strong>123456</strong> gibi basit ve anlamsız şifreler kullanın.
+        <br><br>
+        <span style="color:var(--danger);font-weight:600;">Şifreniz çalınabilir.</span>
+        <br><br>
+        Şifrenizi <strong>Sunset</strong> web sitesinden değiştirebilirsiniz.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="document.getElementById('warning-modal-overlay').classList.remove('open')">
+        Anladım
       </button>
     </div>
   </div>
@@ -462,46 +524,32 @@
   /* ═══════════════════════════════════════════════
      CONSTANTS
   ═══════════════════════════════════════════════ */
-  const DAYS  = ['Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-  const HOURS = ['6:00','7:00','8:00','18:00','19:00','20:00'];
-  const DATA_FILENAME = 'sunset.json';
-  const GCS_BUCKET    = 'sunset_public';
+  const DAYS         = ['2','3','4','5','6','7'];
+  const DAY_NAMES    = { '2':'Salı', '3':'Çarşamba', '4':'Perşembe', '5':'Cuma', '6':'Cumartesi', '7':'Pazar' };
+  const WEEKDAY_HOURS  = ['6:00','7:00','8:00','18:00','19:00','20:00'];
+  const WEEKEND_HOURS  = ['7:00','8:00','9:00','10:00','11:00'];
+  const WEEKEND_DAYS   = new Set(['6','7']);
+  function hoursFor(day) { return WEEKEND_DAYS.has(day) ? WEEKEND_HOURS : WEEKDAY_HOURS; }
+  // Firebase Realtime Database — paste your DB URL here
+  const FIREBASE_URL = 'https://sunset-schedules-default-rtdb.firebaseio.com/entries.json';
 
   /* ═══════════════════════════════════════════════
-     GCS API  — bucket is fully public (read + write)
+     FIREBASE API  — no CORS issues, public test mode
   ═══════════════════════════════════════════════ */
   async function loadData() {
-    const url = `https://storage.googleapis.com/${GCS_BUCKET}/${DATA_FILENAME}`;
-    let res;
-    try {
-      res = await fetch(url, { cache: 'no-store' });
-    } catch (e) {
-      throw new Error(`Network error — check bucket CORS settings (${e.message})`);
-    }
-    if (res.status === 404) return [];
-    if (!res.ok) throw new Error(`GCS read error ${res.status}`);
-    const text = await res.text();
-    if (!text.trim()) return [];
-    try {
-      return JSON.parse(text);
-    } catch {
-      throw new Error('File exists but contains invalid JSON. Check sunset.json in your bucket.');
-    }
+    const res = await fetch(FIREBASE_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`Load error ${res.status}`);
+    const data = await res.json();
+    return data || [];
   }
 
   async function saveData(entries) {
-    // XML API — same domain as reads, avoids JSON API CORS issues
-    const url = `https://storage.googleapis.com/${GCS_BUCKET}/${DATA_FILENAME}`;
-
-    const res = await fetch(url, {
+    const res = await fetch(FIREBASE_URL, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(entries, null, 2),
+      body: JSON.stringify(entries),
     });
-
-    if (!res.ok) {
-      throw new Error(`GCS write error ${res.status}`);
-    }
+    if (!res.ok) throw new Error(`Save error ${res.status}`);
   }
 
   /* ═══════════════════════════════════════════════
@@ -509,25 +557,20 @@
   ═══════════════════════════════════════════════ */
   function buildScheduleGrid() {
     const headerRow = document.getElementById('schedule-header-row');
-    // Clear existing hour headers (keep first "Day" th)
+    // Remove static hour header — hours differ per day, so no shared header
     while (headerRow.children.length > 1) headerRow.removeChild(headerRow.lastChild);
-    HOURS.forEach(h => {
-      const th = document.createElement('th');
-      th.className = 'hour-col';
-      th.textContent = h;
-      headerRow.appendChild(th);
-    });
 
     const tbody = document.getElementById('schedule-body');
     tbody.innerHTML = '';
     DAYS.forEach(day => {
+      const hours = hoursFor(day);
       const tr = document.createElement('tr');
       // Day label
       const tdDay = document.createElement('td');
-      tdDay.textContent = day;
+      tdDay.textContent = DAY_NAMES[day];
       tr.appendChild(tdDay);
       // Hour checkboxes
-      HOURS.forEach(hour => {
+      hours.forEach(hour => {
         const td = document.createElement('td');
         td.className = 'hour-col';
         const id = `cb-${day}-${hour}`;
@@ -540,9 +583,14 @@
         const lbl = document.createElement('label');
         lbl.className = 'slot-label';
         lbl.htmlFor = id;
-        lbl.title = `${day} ${hour}`;
+        lbl.title = `${DAY_NAMES[day]} ${hour}`;
+        // Show hour label below checkbox
+        const span = document.createElement('span');
+        span.style.cssText = 'display:block;font-size:0.68rem;color:var(--text-muted);margin-top:4px;letter-spacing:0;';
+        span.textContent = hour;
         td.appendChild(cb);
         td.appendChild(lbl);
+        td.appendChild(span);
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
@@ -556,6 +604,7 @@
   function readScheduleGrid() {
     const schedule = {};
     DAYS.forEach(d => { schedule[d] = []; });
+    // (checkboxes carry their own day/hour data attributes)
     document.querySelectorAll('.slot-cb:checked').forEach(cb => {
       schedule[cb.dataset.day].push(cb.dataset.hour);
     });
@@ -568,7 +617,7 @@
   function renderTable(entries) {
     const container = document.getElementById('table-container');
     const badge = document.getElementById('count-badge');
-    badge.textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`;
+    badge.textContent = `${entries.length} kayıt`;
 
     if (entries.length === 0) {
       container.innerHTML = `
@@ -577,8 +626,8 @@
             <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
             <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
-          <p>No entries yet.</p>
-          <small>Click <strong>Add Entry</strong> to get started.</small>
+          <p>Henüz kayıt yok.</p>
+          <small>Başlamak için <strong>Kayıt Ekle</strong>'ye tıklayın.</small>
         </div>`;
       return;
     }
@@ -587,24 +636,26 @@
     let html = `<table>
       <thead>
         <tr>
-          <th>Nickname</th>
-          <th>Email</th>
-          <th>Password</th>`;
+          <th>Kullanıcı Adı</th>
+          <th>E-posta</th>
+          <th>Şifre</th>
+          <th>Telefon</th>`;
     DAYS.forEach(d => {
-      HOURS.forEach(h => {
-        html += `<th class="hour-col" title="${d} ${h}">${d.slice(0,3)}<br><span style="font-weight:400;opacity:.7">${h}</span></th>`;
+      hoursFor(d).forEach(h => {
+        html += `<th class="hour-col" title="${DAY_NAMES[d]} ${h}">${DAY_NAMES[d].slice(0,3)}<br><span style="font-weight:400;opacity:.7">${h}</span></th>`;
       });
     });
-    html += `<th>Added</th><th></th></tr>
+    html += `<th>Eklenme</th><th></th></tr>
       </thead><tbody>`;
 
     entries.forEach((entry, idx) => {
       html += `<tr>
         <td style="font-weight:600;color:var(--accent)">${escHtml(entry.nickname || '—')}</td>
-        <td class="email-cell">${escHtml(entry.email)}</td>
+        <td class="pass-cell">••••••••</td>
+        <td class="pass-cell">••••••••</td>
         <td class="pass-cell">••••••••</td>`;
       DAYS.forEach(d => {
-        HOURS.forEach(h => {
+        hoursFor(d).forEach(h => {
           const checked = entry.schedule && entry.schedule[d] && entry.schedule[d].includes(h);
           html += `<td class="hour-col">${checked
             ? `<span class="check-icon">✓</span>`
@@ -613,7 +664,7 @@
       });
       const date = entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : '—';
       html += `<td style="color:var(--text-muted);font-size:0.8rem;">${date}</td>
-        <td><button class="btn btn-danger btn-sm" onclick="deleteEntry(${idx})">✕</button></td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteEntry(${idx})">Sil</button></td>
       </tr>`;
     });
 
@@ -634,19 +685,21 @@
     const nickname = document.getElementById('f-nickname').value.trim();
     const email    = document.getElementById('f-email').value.trim();
     const password = document.getElementById('f-password').value;
+    const phone    = document.getElementById('f-phone').value.trim();
 
-    if (!nickname) { showToast('Nickname is required.', 'error'); return; }
-    if (!email)    { showToast('Email is required.', 'error'); return; }
-    if (!password) { showToast('Password is required.', 'error'); return; }
+    if (!nickname) { showToast('Kullanıcı adı gereklidir.', 'error'); return; }
+    if (!email)    { showToast('E-posta gereklidir.', 'error'); return; }
+    if (!password) { showToast('Şifre gereklidir.', 'error'); return; }
 
     const duplicate = _entries.some(e => e.nickname?.toLowerCase() === nickname.toLowerCase());
-    if (duplicate) { showToast(`Nickname "${nickname}" is already taken.`, 'error'); return; }
+    if (duplicate) { showToast(`"${nickname}" kullanıcı adı zaten alınmış.`, 'error'); return; }
 
     const schedule = readScheduleGrid();
     const entry = {
       nickname,
       email,
-      password: btoa(password),
+      password,
+      phone,
       schedule,
       createdAt: new Date().toISOString(),
     };
@@ -659,25 +712,59 @@
       await saveData(_entries);
       renderTable(_entries);
       closeAddModal();
-      showToast('Entry saved successfully!', 'success');
+      showToast('Kayıt başarıyla eklendi!', 'success');
     } catch (err) {
       _entries.pop();
-      showToast(`Save failed: ${err.message}`, 'error');
+      showToast(`Kaydetme başarısız: ${err.message}`, 'error');
       console.error(err);
     } finally {
       setLoading(btn, false);
     }
   }
 
-  async function deleteEntry(idx) {
-    if (!confirm('Delete this entry?')) return;
+  let _deleteIdx = null;
+
+  function deleteEntry(idx) {
+    _deleteIdx = idx;
+    document.getElementById('delete-email-input').value = '';
+    document.getElementById('delete-modal-overlay').classList.add('open');
+    document.getElementById('delete-email-input').focus();
+  }
+
+  function closeDeleteModal() {
+    _deleteIdx = null;
+    document.getElementById('delete-modal-overlay').classList.remove('open');
+  }
+
+  async function confirmDeleteEntry() {
+    if (_deleteIdx === null) return;
+    const inputEmail = document.getElementById('delete-email-input').value.trim().toLowerCase();
+    const entryEmail = (_entries[_deleteIdx]?.email || '').toLowerCase();
+
+    if (!inputEmail) {
+      showToast('E-posta adresini girin.', 'error');
+      return;
+    }
+    if (inputEmail !== entryEmail) {
+      showToast('E-posta adresi eşleşmiyor.', 'error');
+      document.getElementById('delete-email-input').focus();
+      return;
+    }
+
+    const btn = document.getElementById('delete-confirm-btn');
+    setLoading(btn, true);
+    const idx = _deleteIdx;
     _entries.splice(idx, 1);
     try {
       await saveData(_entries);
       renderTable(_entries);
-      showToast('Entry deleted.', 'success');
+      closeDeleteModal();
+      showToast('Kayıt silindi.', 'success');
     } catch (err) {
-      showToast(`Delete failed: ${err.message}`, 'error');
+      _entries.splice(idx, 0, _entries[idx]);
+      showToast(`Silme başarısız: ${err.message}`, 'error');
+    } finally {
+      setLoading(btn, false);
     }
   }
 
@@ -688,6 +775,7 @@
     document.getElementById('f-nickname').value = '';
     document.getElementById('f-email').value = '';
     document.getElementById('f-password').value = '';
+    document.getElementById('f-phone').value = '';
     resetScheduleGrid();
     document.getElementById('add-modal-overlay').classList.add('open');
     document.getElementById('f-email').focus();
@@ -714,12 +802,18 @@
     _toastTimer = setTimeout(() => { t.className = ''; }, 3500);
   }
 
-  // Close modal on overlay click or Esc
+  // Close modals on overlay click or Esc
   document.getElementById('add-modal-overlay').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeAddModal();
   });
+  document.getElementById('delete-modal-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeDeleteModal();
+  });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeAddModal();
+    if (e.key === 'Escape') { closeAddModal(); closeDeleteModal(); }
+  });
+  document.getElementById('delete-email-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') confirmDeleteEntry();
   });
 
   /* ═══════════════════════════════════════════════
@@ -729,14 +823,14 @@
     buildScheduleGrid();
 
     document.getElementById('table-container').innerHTML =
-      '<div class="loading-state">Fetching data from GCS…</div>';
+      '<div class="loading-state">Veriler yükleniyor…</div>';
 
     try {
       _entries = await loadData();
       renderTable(_entries);
     } catch (err) {
       document.getElementById('table-container').innerHTML =
-        `<div class="empty-state"><p style="color:var(--danger)">Failed to load data.</p><small>${escHtml(err.message)}</small></div>`;
+        `<div class="empty-state"><p style="color:var(--danger)">Veriler yüklenemedi.</p><small>${escHtml(err.message)}</small></div>`;
       console.error(err);
     }
   }
