@@ -526,7 +526,7 @@
   ═══════════════════════════════════════════════ */
   const DAYS         = ['2','3','4','5','6','7'];
   const DAY_NAMES    = { '2':'Salı', '3':'Çarşamba', '4':'Perşembe', '5':'Cuma', '6':'Cumartesi', '7':'Pazar' };
-  const WEEKDAY_HOURS  = ['6:00','7:00','8:00','18:00','19:00','20:00'];
+  const WEEKDAY_HOURS  = ['6:00','7:00','8:00','17:30','18:30','19:30', '20:30'];
   const WEEKEND_HOURS  = ['7:00','8:00','9:00','10:00','11:00'];
   const WEEKEND_DAYS   = new Set(['6','7']);
   function hoursFor(day) { return WEEKEND_DAYS.has(day) ? WEEKEND_HOURS : WEEKDAY_HOURS; }
